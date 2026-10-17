@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/VocalEye.Domain/VocalEye.Domain.csproj" />
+  </ItemGroup>
+</Project>

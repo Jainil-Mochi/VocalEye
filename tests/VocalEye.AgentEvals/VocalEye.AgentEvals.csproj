@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/VocalEye.Agents/VocalEye.Agents.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Rag/VocalEye.Rag.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Infrastructure/VocalEye.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

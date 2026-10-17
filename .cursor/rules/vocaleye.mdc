@@ -1,0 +1,5 @@
+---
+description: VocalEye project rules
+alwaysApply: true
+---
+Follow /AGENTS.md exactly (architecture rules, security rules, conventions, commands). Read docs/roadmap.md to find the current phase before starting work.
