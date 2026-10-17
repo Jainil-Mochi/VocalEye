@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/VocalEye.Application/VocalEye.Application.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Agents/VocalEye.Agents.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Tools/VocalEye.Tools.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Rag/VocalEye.Rag.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Infrastructure/VocalEye.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

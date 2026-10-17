@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/VocalEye.Application/VocalEye.Application.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Domain/VocalEye.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Azure.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="System.ClientModel" />
+  </ItemGroup>
+</Project>

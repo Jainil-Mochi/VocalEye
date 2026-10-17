@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="../../src/VocalEye.Application/VocalEye.Application.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Contracts/VocalEye.Contracts.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Agents/VocalEye.Agents.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Tools/VocalEye.Tools.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Rag/VocalEye.Rag.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Infrastructure/VocalEye.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+  </ItemGroup>
+</Project>

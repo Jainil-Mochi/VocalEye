@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+.env
+appsettings.*.local.json
+secrets.json
+TestResults/
+coverage/
+*.log
+__pycache__/
+legacy/**/config/config.ini

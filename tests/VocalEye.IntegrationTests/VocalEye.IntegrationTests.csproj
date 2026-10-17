@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/VocalEye.Api/VocalEye.Api.csproj" />
+    <ProjectReference Include="../../src/VocalEye.Infrastructure/VocalEye.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
