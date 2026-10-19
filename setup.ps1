@@ -19,10 +19,16 @@ Add-Pkgs "src/VocalEye.Agents/VocalEye.Agents.csproj" @("Microsoft.Agents.AI","M
 Add-Pkgs "src/VocalEye.Tools/VocalEye.Tools.csproj" @("DocumentFormat.OpenXml","MailKit","QuestPDF",$di,$log)
 Add-Pkgs "src/VocalEye.Rag/VocalEye.Rag.csproj" @("Microsoft.Extensions.VectorData.Abstractions","UglyToad.PdfPig","DocumentFormat.OpenXml","Microsoft.ML.Tokenizers",$di)
 Add-Pkgs "src/VocalEye.Infrastructure/VocalEye.Infrastructure.csproj" @("Microsoft.Extensions.AI","Microsoft.Extensions.AI.OpenAI","Azure.AI.OpenAI","OllamaSharp","Anthropic","Npgsql.EntityFrameworkCore.PostgreSQL","Pgvector.EntityFrameworkCore","Microsoft.EntityFrameworkCore.Design","Microsoft.Extensions.Caching.StackExchangeRedis","Microsoft.Extensions.Http.Resilience","OpenTelemetry.Extensions.Hosting","OpenTelemetry.Exporter.OpenTelemetryProtocol","OpenTelemetry.Instrumentation.AspNetCore","OpenTelemetry.Instrumentation.Http")
-Add-Pkgs "src/VocalEye.Api/VocalEye.Api.csproj" @("Microsoft.AspNetCore.OpenApi")
-Add-Pkgs "tests/VocalEye.UnitTests/VocalEye.UnitTests.csproj" @("Microsoft.NET.Test.Sdk","xunit","xunit.runner.visualstudio","NSubstitute")
+Add-Pkgs "src/VocalEye.Api/VocalEye.Api.csproj" @("Microsoft.AspNetCore.OpenApi","Swashbuckle.AspNetCore.SwaggerUI")
+Add-Pkgs "tests/VocalEye.UnitTests/VocalEye.UnitTests.csproj" @("Microsoft.NET.Test.Sdk","xunit","xunit.runner.visualstudio","Moq")
 Add-Pkgs "tests/VocalEye.IntegrationTests/VocalEye.IntegrationTests.csproj" @("Microsoft.NET.Test.Sdk","xunit","xunit.runner.visualstudio","Microsoft.AspNetCore.Mvc.Testing","Testcontainers.PostgreSql")
 Add-Pkgs "tests/VocalEye.AgentEvals/VocalEye.AgentEvals.csproj" @("Microsoft.NET.Test.Sdk","xunit","xunit.runner.visualstudio")
+# FluentAssertions is pinned to 7.x (Apache-2.0); v8+ needs a commercial licence for commercial use.
+foreach ($t in @("tests/VocalEye.UnitTests/VocalEye.UnitTests.csproj","tests/VocalEye.IntegrationTests/VocalEye.IntegrationTests.csproj","tests/VocalEye.AgentEvals/VocalEye.AgentEvals.csproj")) {
+  dotnet add $t package FluentAssertions --version 7.2.0 *> $null
+  if ($LASTEXITCODE -ne 0) { $failed += "${t}:FluentAssertions" }
+}
+
 Write-Host "== build =="; dotnet build VocalEye.slnx; if ($LASTEXITCODE -ne 0) { $failed += "build" }
 Write-Host "== unit tests =="; dotnet test tests/VocalEye.UnitTests --no-build; if ($LASTEXITCODE -ne 0) { $failed += "unit-tests" }
 if ($failed.Count -gt 0) { Write-Host "`nNeeds attention:"; $failed | ForEach-Object { Write-Host "  - $_" }; exit 1 }

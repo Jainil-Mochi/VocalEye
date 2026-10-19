@@ -6,9 +6,11 @@
 
 ## Phase 1: Parity with the Python app (headless, via API)
 - [ ] Options + secrets (Gemini key, SMTP) with `ValidateOnStart`
-- [ ] `ModelCatalog` + `ChatClientFactory` + provider builders (Gemini via OpenAI-compatible, OpenAI, Ollama first; Azure OpenAI/Anthropic next) + `GET /api/models`
-- [ ] Agent Framework orchestrator: build `AIAgent` from the chosen `IChatClient`, `AgentToolAdapter`, approval flow (`PendingApprovals` ↔ `Approvals`), streaming, max-step guard
-- [ ] Conversation history in Postgres in provider-neutral form; model switchable between turns; record model per message
+- [x] **Slice 1:** `ModelCatalog` + `ChatClientFactory` + provider builders (OpenAI, AzureOpenAI, OpenAI-compatible incl. Gemini/Anthropic, Ollama) + `GET /api/models` + dev `POST /api/dev/llm-ping`
+- [x] **Slice 2:** Agent Framework orchestrator (agent per turn from the chosen `IChatClient`), `AgentToolAdapter`, approval flow (`PendingApprovals` ↔ `Approvals`), in-memory history, non-streaming `POST /api/chat`, `get_current_time` demo tool, unit tests with a fake LLM
+- [x] **Slice 3:** streaming `POST /api/chat/stream` over SSE (events `text`, `completed`, `error`); errors before the first byte are normal 400/502 problems
+- [ ] Max-step guard (cap model-to-tool round trips per turn); SignalR only if a UI needs it
+- [ ] Conversation history in Postgres (replace `InMemoryConversationStore`); model switchable between turns; record model per message
 - [ ] Text endpoint accepts `InputMode` text|voice (identical handling); optional `POST /api/transcribe`
 - [ ] Port tools: file generation (txt/pdf/docx/pptx), email (MailKit), desktop command (allow-listed, structured), code builder (sandboxed output dir)
 - [ ] `POST /api/chat`, SignalR streaming, health checks

@@ -7,9 +7,14 @@ public sealed class ToolRegistry : IToolRegistry
     private readonly Dictionary<string, IAgentTool> _tools;
 
     public ToolRegistry(IEnumerable<IAgentTool> tools)
-        => _tools = tools.ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+    {
+        _tools = tools.ToDictionary(tool => tool.Name, StringComparer.OrdinalIgnoreCase);
+    }
 
     public IReadOnlyCollection<IAgentTool> All => _tools.Values;
 
-    public IAgentTool? Find(string name) => _tools.GetValueOrDefault(name);
+    public IAgentTool? Find(string name)
+    {
+        return _tools.GetValueOrDefault(name);
+    }
 }

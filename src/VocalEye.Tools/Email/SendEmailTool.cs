@@ -7,12 +7,17 @@ namespace VocalEye.Tools.Email;
 public sealed class SendEmailTool : IAgentTool
 {
     public string Name => "send_email";
+
     public string Description => "Compose and send an email.";
+
     public ToolRiskLevel Risk => ToolRiskLevel.Destructive;
+
     public string ParametersJsonSchema => """
         {"type":"object","properties":{"receiver_email":{"type":"string"},"subject":{"type":"string"},"topic":{"type":"string"}},"required":["receiver_email","subject","topic"]}
         """;
 
     public Task<ToolResult> ExecuteAsync(JsonElement arguments, CancellationToken cancellationToken)
-        => Task.FromResult(ToolResult.Fail("Not ported yet."));
+    {
+        return Task.FromResult(ToolResult.Fail("Not ported yet."));
+    }
 }

@@ -9,31 +9,41 @@ public sealed class ModelCatalog : IModelCatalog
 
     public ModelCatalog(IOptions<LlmOptions> options)
     {
-        var o = options.Value;
+        LlmOptions llmOptions = options.Value;
 
-        _models = o.Providers
-            .Where(p => p.Value.IsConfigured)
-            .SelectMany(p => p.Value.Models.Select(m => new ModelInfo(
-                Provider: p.Key.ToLowerInvariant(),
-                Model: m.Id,
-                DisplayName: m.DisplayName ?? m.Id,
-                SupportsTools: m.SupportsTools,
-                SupportsStreaming: m.SupportsStreaming,
-                SupportsVision: m.SupportsVision,
-                ContextWindowTokens: m.ContextWindowTokens)))
+        _models = llmOptions.Providers
+            .Where(provider => provider.Value.IsConfigured)
+            .SelectMany(provider => provider.Value.Models.Select(model => new ModelInfo(
+                Provider: provider.Key.ToLowerInvariant(),
+                Model: model.Id,
+                DisplayName: model.DisplayName ?? model.Id,
+                SupportsTools: model.SupportsTools,
+                SupportsStreaming: model.SupportsStreaming,
+                SupportsVision: model.SupportsVision,
+                ContextWindowTokens: model.ContextWindowTokens)))
             .ToList();
 
-        var configuredDefault = new ModelSelection(o.Default.Provider.ToLowerInvariant(), o.Default.Model);
+        ModelSelection configuredDefault = new ModelSelection(
+            llmOptions.Default.Provider.ToLowerInvariant(),
+            llmOptions.Default.Model);
+
+        // A configured default without credentials is skipped: fall back to the first model that can actually be called.
         Default = Find(configuredDefault) is not null || _models.Count == 0
             ? configuredDefault
-            : new ModelSelection(_models[0].Provider, _models[0].Model); // configured default has no key: use first available
+            : new ModelSelection(_models[0].Provider, _models[0].Model);
     }
 
     public ModelSelection Default { get; }
 
-    public IReadOnlyList<ModelInfo> List() => _models;
+    public IReadOnlyList<ModelInfo> List()
+    {
+        return _models;
+    }
 
-    public ModelInfo? Find(ModelSelection selection) => _models.FirstOrDefault(m =>
-        string.Equals(m.Provider, selection.Provider, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(m.Model, selection.Model, StringComparison.OrdinalIgnoreCase));
+    public ModelInfo? Find(ModelSelection selection)
+    {
+        return _models.FirstOrDefault(model =>
+            string.Equals(model.Provider, selection.Provider, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(model.Model, selection.Model, StringComparison.OrdinalIgnoreCase));
+    }
 }

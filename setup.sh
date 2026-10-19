@@ -21,10 +21,15 @@ add $S/VocalEye.Agents/VocalEye.Agents.csproj           Microsoft.Agents.AI Micr
 add $S/VocalEye.Tools/VocalEye.Tools.csproj             DocumentFormat.OpenXml MailKit QuestPDF Microsoft.Extensions.DependencyInjection.Abstractions Microsoft.Extensions.Logging.Abstractions
 add $S/VocalEye.Rag/VocalEye.Rag.csproj                 Microsoft.Extensions.VectorData.Abstractions UglyToad.PdfPig DocumentFormat.OpenXml Microsoft.ML.Tokenizers Microsoft.Extensions.DependencyInjection.Abstractions
 add $S/VocalEye.Infrastructure/VocalEye.Infrastructure.csproj Microsoft.Extensions.AI Microsoft.Extensions.AI.OpenAI Azure.AI.OpenAI OllamaSharp Anthropic Npgsql.EntityFrameworkCore.PostgreSQL Pgvector.EntityFrameworkCore Microsoft.EntityFrameworkCore.Design Microsoft.Extensions.Caching.StackExchangeRedis Microsoft.Extensions.Http.Resilience OpenTelemetry.Extensions.Hosting OpenTelemetry.Exporter.OpenTelemetryProtocol OpenTelemetry.Instrumentation.AspNetCore OpenTelemetry.Instrumentation.Http
-add $S/VocalEye.Api/VocalEye.Api.csproj                 Microsoft.AspNetCore.OpenApi
-add $T/VocalEye.UnitTests/VocalEye.UnitTests.csproj     Microsoft.NET.Test.Sdk xunit xunit.runner.visualstudio NSubstitute
+add $S/VocalEye.Api/VocalEye.Api.csproj                 Microsoft.AspNetCore.OpenApi Swashbuckle.AspNetCore.SwaggerUI
+add $T/VocalEye.UnitTests/VocalEye.UnitTests.csproj     Microsoft.NET.Test.Sdk xunit xunit.runner.visualstudio Moq
 add $T/VocalEye.IntegrationTests/VocalEye.IntegrationTests.csproj Microsoft.NET.Test.Sdk xunit xunit.runner.visualstudio Microsoft.AspNetCore.Mvc.Testing Testcontainers.PostgreSql
 add $T/VocalEye.AgentEvals/VocalEye.AgentEvals.csproj   Microsoft.NET.Test.Sdk xunit xunit.runner.visualstudio
+
+# FluentAssertions is pinned to 7.x (Apache-2.0); v8+ needs a commercial licence for commercial use.
+for t in $T/VocalEye.UnitTests/VocalEye.UnitTests.csproj $T/VocalEye.IntegrationTests/VocalEye.IntegrationTests.csproj $T/VocalEye.AgentEvals/VocalEye.AgentEvals.csproj; do
+  dotnet add "$t" package FluentAssertions --version 7.2.0 >/dev/null 2>&1 || FAILED+=("$t:FluentAssertions")
+done
 
 echo "== build =="; dotnet build VocalEye.slnx || FAILED+=("build")
 echo "== unit tests =="; dotnet test tests/VocalEye.UnitTests --no-build || FAILED+=("unit-tests")

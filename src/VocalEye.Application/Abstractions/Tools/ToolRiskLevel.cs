@@ -1,4 +1,9 @@
 namespace VocalEye.Application.Abstractions.Tools;
 
-/// <summary>Drives the approval policy: Destructive tools never run without explicit user confirmation.</summary>
-public enum ToolRiskLevel { ReadOnly, Write, Destructive }
+/// <summary>Drives the approval policy.</summary>
+public enum ToolRiskLevel
+{
+    ReadOnly,
+    Write,
+    Destructive
+}

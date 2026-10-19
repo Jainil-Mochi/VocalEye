@@ -3,7 +3,7 @@
 Production-grade agentic AI platform in .NET 10 built on **Microsoft Agent Framework**: tool-calling agents, RAG, text + voice input, and **any LLM chosen at runtime** (Gemini, OpenAI, Azure OpenAI, Anthropic, Ollama, any OpenAI-compatible endpoint). This is a port and expansion of the original Python prototype
 (`legacy/python-voice-assistant`, a Gemini voice assistant with Tkinter UI).
 
-> **Working with an AI coding tool (Codex, Cursor, Claude Code)?** Read [`AGENTS.md`](AGENTS.md) first.
+> **Working with an AI coding tool (Codex, Cursor, Claude Code)?** Read [`AGENTS.md`](AGENTS.md) first. Code must follow the binding [coding standards](docs/coding-standards.md).
 
 ## Quick start
 ```bash
@@ -11,7 +11,7 @@ Production-grade agentic AI platform in .NET 10 built on **Microsoft Agent Frame
 docker compose up -d  # Postgres+pgvector, Redis, OpenTelemetry dashboard (http://localhost:18888)
 dotnet user-secrets init --project src/VocalEye.Api
 dotnet user-secrets set "Llm:Providers:gemini:ApiKey" "<key>" --project src/VocalEye.Api   # add any providers you like
-dotnet run --project src/VocalEye.Api      # GET /health, GET /api/tools (Phase 1: GET /api/models, POST /api/chat)
+dotnet run --project src/VocalEye.Api      # GET /health, GET /api/tools (Phase 1: GET /api/models, POST /api/chat, POST /api/chat/stream)
 ```
 
 ## Architecture in one picture

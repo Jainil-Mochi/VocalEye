@@ -1,14 +1,24 @@
+using System.Net;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace VocalEye.IntegrationTests;
 
-public class HealthTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class HealthTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    [Fact]
-    public async Task Health_endpoint_returns_ok()
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public HealthTests(WebApplicationFactory<Program> factory)
     {
-        var response = await factory.CreateClient().GetAsync("/health");
-        Assert.True(response.IsSuccessStatusCode);
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task GetHealth_ReturnsOk()
+    {
+        HttpResponseMessage response = await _factory.CreateClient().GetAsync("/health");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }

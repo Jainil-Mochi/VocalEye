@@ -7,12 +7,17 @@ namespace VocalEye.Tools.CodeBuilder;
 public sealed class CodeBuilderTool : IAgentTool
 {
     public string Name => "code_builder";
+
     public string Description => "Generate a project skeleton from a natural-language description.";
+
     public ToolRiskLevel Risk => ToolRiskLevel.Write;
+
     public string ParametersJsonSchema => """
         {"type":"object","properties":{"user_text":{"type":"string"}},"required":["user_text"]}
         """;
 
     public Task<ToolResult> ExecuteAsync(JsonElement arguments, CancellationToken cancellationToken)
-        => Task.FromResult(ToolResult.Fail("Not ported yet."));
+    {
+        return Task.FromResult(ToolResult.Fail("Not ported yet."));
+    }
 }

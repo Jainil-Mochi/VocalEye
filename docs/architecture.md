@@ -14,7 +14,7 @@ Api / Worker      → everything (composition roots)
 ```
 
 ## Core runtime flow (one user turn)
-1. Client sends **typed text or transcribed speech** (same field, `InputMode` metadata) plus an optional **model choice** → `POST /api/chat` (or SignalR stream).
+1. Client sends **typed text or transcribed speech** (same field, `InputMode` metadata) plus an optional **model choice** → `POST /api/chat`, or `POST /api/chat/stream` for server-sent events.
 2. `IAgentOrchestrator` resolves the model: request → conversation's last model → catalog default.
 3. `IChatClientFactory.Create(selection)` returns the cached `IChatClient`; the orchestrator builds an Agent Framework `AIAgent` with instructions + tools (`IAgentTool` adapted to `AIFunction`) and the conversation history loaded from Postgres.
 4. The agent runs. For tools the policy marks as needing approval, the run **pauses** and returns `PendingApprovals`; the client shows Approve/Deny and calls again with `Approvals`. Otherwise the tool runs and its result goes back to the model (loop, with a max-step guard).

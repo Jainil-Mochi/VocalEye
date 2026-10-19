@@ -1,5 +1,7 @@
 using VocalEye.Agents;
+using VocalEye.Api.Configuration;
 using VocalEye.Api.Endpoints;
+using VocalEye.Api.Middleware;
 using VocalEye.Application.Abstractions.Tools;
 using VocalEye.Infrastructure;
 using VocalEye.Tools.CodeBuilder;
@@ -9,7 +11,7 @@ using VocalEye.Tools.FileGeneration;
 using VocalEye.Tools.Registry;
 using VocalEye.Tools.Utility;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi(); // built-in .NET OpenAPI document generator (/openapi/v1.json)
@@ -25,30 +27,35 @@ builder.Services.AddSingleton<IAgentTool, GetCurrentTimeTool>();
 builder.Services.AddSingleton<IToolRegistry, ToolRegistry>();
 
 // Which tool risk levels pause for user approval (config: Tools:RequireApprovalFor).
-var approvalRisks = (builder.Configuration.GetSection("Tools:RequireApprovalFor").Get<string[]>() ?? [])
-    .Select(r => Enum.Parse<ToolRiskLevel>(r, ignoreCase: true));
+IReadOnlyList<ToolRiskLevel> approvalRisks = ToolRiskParser.Parse(
+    builder.Configuration.GetSection("Tools:RequireApprovalFor").Get<string[]>());
 builder.Services.AddAgents(approvalRisks);
 
-var app = builder.Build();
+WebApplication app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();                                   // GET /openapi/v1.json
-    app.UseSwaggerUI(o =>                               // GET /swagger
+    app.UseSwaggerUI(options =>                         // GET /swagger
     {
-        o.SwaggerEndpoint("/openapi/v1.json", "VocalEye API v1");
-        o.DocumentTitle = "VocalEye API";
+        options.SwaggerEndpoint("/openapi/v1.json", "VocalEye API v1");
+        options.DocumentTitle = "VocalEye API";
     });
     app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
 
 app.MapHealthChecks("/health");
 app.MapGet("/api/tools", (IToolRegistry registry) =>
-    registry.All.Select(t => new { t.Name, t.Description, Risk = t.Risk.ToString() }));
+    registry.All.Select(tool => new { tool.Name, tool.Description, Risk = tool.Risk.ToString() }));
 app.MapModelEndpoints();
 app.MapChatEndpoints();
+
 if (app.Environment.IsDevelopment())
+{
     app.MapDevEndpoints();
+}
 
 app.Run();
 

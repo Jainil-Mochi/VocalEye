@@ -7,12 +7,17 @@ namespace VocalEye.Tools.FileGeneration;
 public sealed class FileGenerationTool : IAgentTool
 {
     public string Name => "file_generator";
+
     public string Description => "Generate content about a topic and save it as txt, pdf, docx or pptx.";
+
     public ToolRiskLevel Risk => ToolRiskLevel.Write;
+
     public string ParametersJsonSchema => """
         {"type":"object","properties":{"topic":{"type":"string"},"filetype":{"type":"string","enum":["txt","pdf","docx","pptx"]}},"required":["topic","filetype"]}
         """;
 
     public Task<ToolResult> ExecuteAsync(JsonElement arguments, CancellationToken cancellationToken)
-        => Task.FromResult(ToolResult.Fail("Not ported yet."));
+    {
+        return Task.FromResult(ToolResult.Fail("Not ported yet."));
+    }
 }
