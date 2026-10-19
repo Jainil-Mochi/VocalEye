@@ -1,3 +1,5 @@
+using FluentAssertions;
+using VocalEye.Application.Abstractions.Tools;
 using VocalEye.Tools.CodeBuilder;
 using VocalEye.Tools.Email;
 using VocalEye.Tools.Registry;
@@ -8,10 +10,11 @@ namespace VocalEye.UnitTests;
 public class ToolRegistryTests
 {
     [Fact]
-    public void Find_is_case_insensitive()
+    public void Find_IsCaseInsensitive()
     {
-        var registry = new ToolRegistry([new SendEmailTool(), new CodeBuilderTool()]);
-        Assert.NotNull(registry.Find("SEND_EMAIL"));
-        Assert.Null(registry.Find("nope"));
+        ToolRegistry registry = new ToolRegistry(new IAgentTool[] { new SendEmailTool(), new CodeBuilderTool() });
+
+        registry.Find("SEND_EMAIL").Should().NotBeNull();
+        registry.Find("nope").Should().BeNull();
     }
 }

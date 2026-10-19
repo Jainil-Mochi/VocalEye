@@ -7,12 +7,17 @@ namespace VocalEye.Tools.DesktopCommand;
 public sealed class DesktopCommandTool : IAgentTool
 {
     public string Name => "desktop_command";
+
     public string Description => "Perform a desktop task such as opening an app or URL.";
+
     public ToolRiskLevel Risk => ToolRiskLevel.Destructive;
+
     public string ParametersJsonSchema => """
         {"type":"object","properties":{"user_text":{"type":"string"}},"required":["user_text"]}
         """;
 
     public Task<ToolResult> ExecuteAsync(JsonElement arguments, CancellationToken cancellationToken)
-        => Task.FromResult(ToolResult.Fail("Not ported yet."));
+    {
+        return Task.FromResult(ToolResult.Fail("Not ported yet."));
+    }
 }

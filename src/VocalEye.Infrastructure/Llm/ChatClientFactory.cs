@@ -7,34 +7,46 @@ using VocalEye.Infrastructure.Llm.Providers;
 
 namespace VocalEye.Infrastructure.Llm;
 
-public sealed class ChatClientFactory(
-    IOptions<LlmOptions> options,
-    IModelCatalog catalog,
-    ILoggerFactory loggerFactory) : IChatClientFactory
+public sealed class ChatClientFactory : IChatClientFactory
 {
     public const string TelemetrySource = "VocalEye.Llm";
 
-    private readonly ConcurrentDictionary<(string Provider, string Model), IChatClient> _cache = new();
+    private readonly IOptions<LlmOptions> _options;
+    private readonly IModelCatalog _catalog;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ConcurrentDictionary<(string Provider, string Model), IChatClient> _cache = new ConcurrentDictionary<(string Provider, string Model), IChatClient>();
+
+    public ChatClientFactory(IOptions<LlmOptions> options, IModelCatalog catalog, ILoggerFactory loggerFactory)
+    {
+        _options = options;
+        _catalog = catalog;
+        _loggerFactory = loggerFactory;
+    }
 
     public IChatClient Create(ModelSelection selection)
     {
-        if (catalog.Find(selection) is null)
+        if (_catalog.Find(selection) is null)
+        {
             throw new ArgumentException(
                 $"Model '{selection.Provider}/{selection.Model}' is not available. Check Llm:Providers in configuration and that its API key/endpoint is set.",
                 nameof(selection));
+        }
 
-        var key = (selection.Provider.ToLowerInvariant(), selection.Model.ToLowerInvariant());
+        (string, string) key = (selection.Provider.ToLowerInvariant(), selection.Model.ToLowerInvariant());
         return _cache.GetOrAdd(key, _ => Build(selection));
     }
 
     private IChatClient Build(ModelSelection selection)
     {
-        var provider = options.Value.Providers
-            .First(p => string.Equals(p.Key, selection.Provider, StringComparison.OrdinalIgnoreCase)).Value;
+        ProviderOptions provider = _options.Value.Providers
+            .First(entry => string.Equals(entry.Key, selection.Provider, StringComparison.OrdinalIgnoreCase))
+            .Value;
 
-        return ProviderClientBuilder.Build(provider, selection.Model)
+        IChatClient raw = ProviderClientBuilder.Build(provider, selection.Model);
+
+        return new ErrorDetailChatClient(raw, $"{selection.Provider}/{selection.Model}")
             .AsBuilder()
-            .UseOpenTelemetry(loggerFactory, TelemetrySource)
+            .UseOpenTelemetry(_loggerFactory, TelemetrySource)
             .Build();
     }
 }

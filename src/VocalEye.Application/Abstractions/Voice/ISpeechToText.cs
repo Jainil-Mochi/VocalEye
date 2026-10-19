@@ -5,8 +5,3 @@ public interface ISpeechToText
 {
     Task<string?> ListenAsync(CancellationToken cancellationToken);
 }
-
-public interface ITextToSpeech
-{
-    Task SpeakAsync(string text, CancellationToken cancellationToken);
-}

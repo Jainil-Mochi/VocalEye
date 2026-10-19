@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -16,121 +16,137 @@ namespace VocalEye.Agents.Orchestration;
 /// The agent is rebuilt every turn for the chosen model and is given the full stored history, so the model can
 /// change between turns and the service stays stateless (ADR-0007).
 /// </summary>
-public sealed class AgentOrchestrator(
-    IChatClientFactory clients,
-    IModelCatalog catalog,
-    IToolRegistry tools,
-    IToolApprovalPolicy approvalPolicy,
-    IConversationStore store,
-    ILogger<AgentOrchestrator> logger) : IAgentOrchestrator
+public sealed class AgentOrchestrator : IAgentOrchestrator
 {
+    private readonly IChatClientFactory _clients;
+    private readonly IModelCatalog _catalog;
+    private readonly IToolRegistry _tools;
+    private readonly IToolApprovalPolicy _approvalPolicy;
+    private readonly IConversationStore _store;
+    private readonly ILogger<AgentOrchestrator> _logger;
+
+    public AgentOrchestrator(
+        IChatClientFactory clients,
+        IModelCatalog catalog,
+        IToolRegistry tools,
+        IToolApprovalPolicy approvalPolicy,
+        IConversationStore store,
+        ILogger<AgentOrchestrator> logger)
+    {
+        _clients = clients;
+        _catalog = catalog;
+        _tools = tools;
+        _approvalPolicy = approvalPolicy;
+        _store = store;
+        _logger = logger;
+    }
+
     public async Task<AgentReply> RunAsync(AgentRequest request, CancellationToken cancellationToken)
     {
-        var hasText = !string.IsNullOrWhiteSpace(request.UserInput);
-        var hasApprovals = request.Approvals is { Count: > 0 };
+        TurnContext turn = await PrepareTurnAsync(request, cancellationToken);
+
+        AgentResponse response = await turn.Agent.RunAsync(turn.History, cancellationToken: cancellationToken);
+
+        return await CompleteTurnAsync(turn, response, cancellationToken);
+    }
+
+    public async IAsyncEnumerable<AgentStreamEvent> RunStreamingAsync(
+        AgentRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        TurnContext turn = await PrepareTurnAsync(request, cancellationToken);
+
+        List<AgentResponseUpdate> updates = new List<AgentResponseUpdate>();
+        await foreach (AgentResponseUpdate update in turn.Agent.RunStreamingAsync(turn.History, cancellationToken: cancellationToken))
+        {
+            updates.Add(update);
+
+            if (!string.IsNullOrEmpty(update.Text))
+            {
+                yield return AgentStreamEvent.ForText(update.Text);
+            }
+        }
+
+        // Rebuild the complete messages (text, tool calls, results, approval requests) so they can be stored.
+        AgentResponse response = updates.ToAgentResponse();
+        AgentReply reply = await CompleteTurnAsync(turn, response, cancellationToken);
+
+        yield return AgentStreamEvent.ForCompleted(reply);
+    }
+
+    private async Task<TurnContext> PrepareTurnAsync(AgentRequest request, CancellationToken cancellationToken)
+    {
+        bool hasText = !string.IsNullOrWhiteSpace(request.UserInput);
+        bool hasApprovals = request.Approvals is { Count: > 0 };
+
         if (!hasText && !hasApprovals)
+        {
             throw new ArgumentException("Provide a message or approval decisions.", nameof(request));
+        }
 
-        var state = await store.GetAsync(request.ConversationId, cancellationToken);
+        if (_catalog.List().Count == 0)
+        {
+            throw new ArgumentException(
+                "No AI models are configured. Set at least one provider API key and restart, e.g. " +
+                "dotnet user-secrets set \"Llm:Providers:groq:ApiKey\" \"<key>\" --project src/VocalEye.Api",
+                nameof(request));
+        }
 
-        var selection = request.Model ?? state.Model ?? catalog.Default;
-        var info = catalog.Find(selection)
+        ConversationState state = await _store.GetAsync(request.ConversationId, cancellationToken);
+
+        ModelSelection selection = request.Model ?? state.Model ?? _catalog.Default;
+        ModelInfo info = _catalog.Find(selection)
             ?? throw new ArgumentException($"Model '{selection.Provider}/{selection.Model}' is not available.", nameof(request));
 
-        var input = new List<ChatMessage>();
+        List<ChatMessage> input = new List<ChatMessage>();
         if (hasApprovals)
-            input.Add(BuildApprovalMessage(state, request.Approvals!));
-        if (hasText)
-            input.Add(new ChatMessage(ChatRole.User, request.UserInput!));
+        {
+            input.Add(ApprovalMessageBuilder.Build(state.Messages, request.Approvals!));
+        }
 
-        // A model without tool support still works; it just can't act.
-        var agentTools = info.SupportsTools ? AgentToolFactory.Create(tools, approvalPolicy) : null;
+        if (hasText)
+        {
+            input.Add(new ChatMessage(ChatRole.User, request.UserInput!));
+        }
+
+        // A model without tool support still works; it just cannot act.
+        List<AITool>? agentTools = info.SupportsTools ? AgentToolFactory.Create(_tools, _approvalPolicy) : null;
 
         AIAgent agent = new ChatClientAgent(
-            clients.Create(selection),
+            _clients.Create(selection),
             instructions: SystemPrompts.Assistant,
             name: "VocalEye",
             tools: agentTools);
 
-        var history = state.Messages.Concat(input).ToList();
+        List<ChatMessage> history = state.Messages.Concat(input).ToList();
 
-        logger.LogInformation(
+        _logger.LogInformation(
             "Agent turn {ConversationId} model={Provider}/{Model} mode={Mode} tools={ToolCount} historyMessages={History}",
-            request.ConversationId, selection.Provider, selection.Model, request.Mode, agentTools?.Count ?? 0, history.Count);
+            request.ConversationId,
+            selection.Provider,
+            selection.Model,
+            request.Mode,
+            agentTools?.Count ?? 0,
+            history.Count);
 
-        AgentResponse response;
-        try
-        {
-            response = await agent.RunAsync(history, cancellationToken: cancellationToken);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogError(ex, "Model call failed for {Provider}/{Model}", selection.Provider, selection.Model);
-            throw new ModelCallFailedException(selection, ex);
-        }
+        return new TurnContext(state, selection, agent, input, history, request, agentTools?.Count ?? 0);
+    }
 
-        state.Messages.AddRange(input);
-        state.Messages.AddRange(response.Messages);
-        state.Model = selection;
-        await store.SaveAsync(state, cancellationToken);
+    private async Task<AgentReply> CompleteTurnAsync(TurnContext turn, AgentResponse response, CancellationToken cancellationToken)
+    {
+        turn.State.Messages.AddRange(turn.Input);
+        turn.State.Messages.AddRange(response.Messages);
+        turn.State.Model = turn.Selection;
+        await _store.SaveAsync(turn.State, cancellationToken);
 
-        var reply = BuildReply(response, history, selection);
-        logger.LogInformation(
+        AgentReply reply = AgentReplyBuilder.Build(response.Text, response.Messages.ToList(), turn.History, turn.Selection);
+
+        _logger.LogInformation(
             "Agent turn {ConversationId} done: toolCalls={ToolCalls} pendingApprovals={Pending}",
-            request.ConversationId, reply.ToolCalls.Count, reply.PendingApprovals.Count);
+            turn.Request.ConversationId,
+            reply.ToolCalls.Count,
+            reply.PendingApprovals.Count);
+
         return reply;
     }
-
-    /// <summary>Turns the user's Approve/Deny answers into the message the framework expects to resume the paused run.</summary>
-    private static ChatMessage BuildApprovalMessage(ConversationState state, IReadOnlyList<ApprovalDecision> decisions)
-    {
-        var requests = state.Messages
-            .SelectMany(m => m.Contents)
-            .OfType<ToolApprovalRequestContent>()
-            .Where(r => r.ToolCall is FunctionCallContent)
-            .GroupBy(r => ((FunctionCallContent)r.ToolCall).CallId)
-            .ToDictionary(g => g.Key, g => g.Last());
-
-        var contents = new List<AIContent>();
-        foreach (var decision in decisions)
-        {
-            if (!requests.TryGetValue(decision.ApprovalId, out var pending))
-                throw new InvalidOperationException($"No pending approval with id '{decision.ApprovalId}'.");
-            contents.Add(pending.CreateResponse(decision.Approved));
-        }
-        return new ChatMessage(ChatRole.User, contents);
-    }
-
-    private static AgentReply BuildReply(AgentResponse response, IReadOnlyList<ChatMessage> history, ModelSelection model)
-    {
-        var fresh = response.Messages.SelectMany(m => m.Contents).ToList();
-
-        // A tool result may belong to a call made in an earlier turn (approval resume), so look calls up in everything.
-        var calls = history.SelectMany(m => m.Contents).Concat(fresh)
-            .OfType<FunctionCallContent>()
-            .GroupBy(c => c.CallId)
-            .ToDictionary(g => g.Key, g => g.First());
-
-        var invocations = fresh.OfType<FunctionResultContent>().Select(result =>
-        {
-            calls.TryGetValue(result.CallId, out var call);
-            var text = result.Result?.ToString() ?? string.Empty;
-            var failed = text.StartsWith(AgentToolAdapter.ErrorPrefix, StringComparison.Ordinal);
-            return new ToolInvocation(
-                call?.Name ?? "unknown",
-                ArgumentsJson(call),
-                failed ? ToolResult.Fail(text[AgentToolAdapter.ErrorPrefix.Length..]) : ToolResult.Ok(text));
-        }).ToList();
-
-        var pending = fresh.OfType<ToolApprovalRequestContent>()
-            .Select(r => r.ToolCall as FunctionCallContent)
-            .OfType<FunctionCallContent>()
-            .Select(c => new PendingApproval(c.CallId, c.Name, ArgumentsJson(c)))
-            .ToList();
-
-        return new AgentReply(response.Text, model, invocations, pending);
-    }
-
-    private static string ArgumentsJson(FunctionCallContent? call)
-        => JsonSerializer.Serialize(call?.Arguments ?? new Dictionary<string, object?>());
 }

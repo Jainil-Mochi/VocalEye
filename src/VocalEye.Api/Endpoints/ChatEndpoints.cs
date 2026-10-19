@@ -1,11 +1,6 @@
-using System;
-using System.Linq;
-using System.Threading;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
+using VocalEye.Api.Mapping;
+using VocalEye.Api.Streaming;
 using VocalEye.Application.Abstractions.Agents;
-using VocalEye.Application.Abstractions.Llm;
 using VocalEye.Contracts.Chat;
 
 namespace VocalEye.Api.Endpoints;
@@ -15,60 +10,48 @@ public static class ChatEndpoints
     public static IEndpointRouteBuilder MapChatEndpoints(this IEndpointRouteBuilder app)
     {
         // Typed text and transcribed speech arrive the same way: Message + InputMode.
-        app.MapPost("/api/chat", async (ChatRequest body, IAgentOrchestrator orchestrator, CancellationToken ct) =>
-        {
-            var conversationId = body.ConversationId ?? Guid.NewGuid();
+        app.MapPost("/api/chat", ChatAsync);
 
-            var mode = string.Equals(body.InputMode, InputModes.Voice, StringComparison.OrdinalIgnoreCase)
-                ? InputMode.Voice
-                : InputMode.Text;
-
-            var model = body.Model is null ? null : new ModelSelection(body.Model.Provider, body.Model.Model);
-            var approvals = body.Approvals?.Select(a => new ApprovalDecision(a.ApprovalId, a.Approved)).ToList();
-
-            try
-            {
-                var reply = await orchestrator.RunAsync(
-                    new AgentRequest(conversationId, body.Message, mode, model, approvals), ct);
-
-                return Results.Ok(new ChatResponse
-                {
-                    ConversationId = conversationId,
-                    Reply = reply.Text,
-                    ModelUsed = new ModelSelectionDto
-                    {
-                        Provider = reply.ModelUsed.Provider,
-                        Model = reply.ModelUsed.Model
-                    },
-                    ToolCalls = reply.ToolCalls.Select(t => new ToolCallDto
-                    {
-                        Name = t.Name,
-                        ArgumentsJson = t.ArgumentsJson,
-                        Success = t.Result.Success,
-                        Output = t.Result.Success ? t.Result.Output : (t.Result.Error ?? "")
-                    }).ToList(),
-                    PendingApprovals = reply.PendingApprovals.Select(p => new PendingApprovalDto
-                    {
-                        ApprovalId = p.ApprovalId,
-                        ToolName = p.ToolName,
-                        ArgumentsJson = p.ArgumentsJson
-                    }).ToList()
-                });
-            }
-            catch (ModelCallFailedException ex)
-            {
-                return Results.Problem(title: "Model call failed", detail: ex.Message, statusCode: StatusCodes.Status502BadGateway);
-            }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
-            {
-                return Results.Problem(title: "Invalid request", detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return Results.Problem(title: "Model call failed", detail: ex.Message, statusCode: StatusCodes.Status502BadGateway);
-            }
-        });
+        // Same request body, but the answer streams as server-sent events: "text", then "completed" (or "error").
+        app.MapPost("/api/chat/stream", StreamAsync);
 
         return app;
+    }
+
+    private static async Task<IResult> ChatAsync(
+        ChatRequestDto body,
+        IAgentOrchestrator orchestrator,
+        CancellationToken cancellationToken)
+    {
+        Guid conversationId = body.ConversationId ?? Guid.NewGuid();
+
+        AgentReply reply = await orchestrator.RunAsync(ChatMapper.ToRequest(body, conversationId), cancellationToken);
+
+        return Results.Ok(ChatMapper.ToResponse(reply, conversationId));
+    }
+
+    private static async Task<IResult> StreamAsync(
+        ChatRequestDto body,
+        IAgentOrchestrator orchestrator,
+        ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        Guid conversationId = body.ConversationId ?? Guid.NewGuid();
+
+        IAsyncEnumerator<AgentStreamEvent> events = orchestrator
+            .RunStreamingAsync(ChatMapper.ToRequest(body, conversationId), cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+
+        // Pull the first event before the response starts: validation errors and a model that refuses the
+        // request then become a normal 400/502 problem response from the global middleware.
+        if (!await events.MoveNextAsync())
+        {
+            await events.DisposeAsync();
+            return Results.NoContent();
+        }
+
+        ILogger logger = loggerFactory.CreateLogger("VocalEye.Api.ChatStream");
+
+        return TypedResults.ServerSentEvents(ChatStreamWriter.WriteAsync(events, conversationId, logger, cancellationToken));
     }
 }

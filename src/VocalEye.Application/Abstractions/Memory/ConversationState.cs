@@ -10,7 +10,9 @@ namespace VocalEye.Application.Abstractions.Memory;
 public sealed class ConversationState
 {
     public required Guid Id { get; init; }
-    public List<ChatMessage> Messages { get; } = [];
-    /// <summary>Model used on the last turn. Used when a request doesn't pick one.</summary>
+
+    public List<ChatMessage> Messages { get; } = new List<ChatMessage>();
+
+    /// <summary>Model used on the last turn. Used when a request does not pick one.</summary>
     public ModelSelection? Model { get; set; }
 }
