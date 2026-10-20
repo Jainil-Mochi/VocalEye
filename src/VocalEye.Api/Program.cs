@@ -4,6 +4,7 @@ using VocalEye.Api.Endpoints;
 using VocalEye.Api.Middleware;
 using VocalEye.Application.Abstractions.Tools;
 using VocalEye.Infrastructure;
+using VocalEye.Infrastructure.Persistence;
 using VocalEye.Tools.CodeBuilder;
 using VocalEye.Tools.DesktopCommand;
 using VocalEye.Tools.Email;
@@ -16,7 +17,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi(); // built-in .NET OpenAPI document generator (/openapi/v1.json)
 builder.Services.AddLlm(builder.Configuration);
-builder.Services.AddInMemoryConversationStore();
+builder.Services.AddPersistence(builder.Configuration); // Postgres by default; Persistence:Provider=InMemory for no database
 
 // Tools. Move into a Tools-module AddTools() extension when the tools are ported.
 builder.Services.AddSingleton<IAgentTool, FileGenerationTool>();
@@ -51,10 +52,17 @@ app.MapGet("/api/tools", (IToolRegistry registry) =>
     registry.All.Select(tool => new { tool.Name, tool.Description, Risk = tool.Risk.ToString() }));
 app.MapModelEndpoints();
 app.MapChatEndpoints();
+app.MapConversationEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapDevEndpoints();
+}
+
+if (app.Environment.IsDevelopment())
+{
+    // Creates the tables on first run (no migrations yet, see ADR-0009).
+    await app.Services.InitializePersistenceAsync();
 }
 
 app.Run();

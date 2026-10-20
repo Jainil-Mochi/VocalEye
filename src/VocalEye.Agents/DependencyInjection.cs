@@ -13,7 +13,8 @@ public static class DependencyInjection
     public static IServiceCollection AddAgents(this IServiceCollection services, IEnumerable<ToolRiskLevel> requireApprovalFor)
     {
         services.AddSingleton<IToolApprovalPolicy>(new ToolApprovalPolicy(requireApprovalFor.ToArray()));
-        services.AddSingleton<IAgentOrchestrator, AgentOrchestrator>();
+        // Scoped: the orchestrator uses the conversation store, which uses a per-request database context.
+        services.AddScoped<IAgentOrchestrator, AgentOrchestrator>();
 
         return services;
     }

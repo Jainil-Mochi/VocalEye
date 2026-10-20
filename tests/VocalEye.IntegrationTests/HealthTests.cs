@@ -1,15 +1,14 @@
 using System.Net;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace VocalEye.IntegrationTests;
 
-public class HealthTests : IClassFixture<WebApplicationFactory<Program>>
+public class HealthTests : IClassFixture<TestApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestApiFactory _factory;
 
-    public HealthTests(WebApplicationFactory<Program> factory)
+    public HealthTests(TestApiFactory factory)
     {
         _factory = factory;
     }
