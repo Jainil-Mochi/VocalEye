@@ -1,17 +1,16 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace VocalEye.IntegrationTests;
 
 /// <summary>Verifies the global exception middleware turns faults into problem responses.</summary>
-public class ApiErrorHandlingTests : IClassFixture<WebApplicationFactory<Program>>
+public class ApiErrorHandlingTests : IClassFixture<TestApiFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly TestApiFactory _factory;
 
-    public ApiErrorHandlingTests(WebApplicationFactory<Program> factory)
+    public ApiErrorHandlingTests(TestApiFactory factory)
     {
         _factory = factory;
     }

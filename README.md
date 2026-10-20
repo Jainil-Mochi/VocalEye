@@ -11,7 +11,11 @@ Production-grade agentic AI platform in .NET 10 built on **Microsoft Agent Frame
 docker compose up -d  # Postgres+pgvector, Redis, OpenTelemetry dashboard (http://localhost:18888)
 dotnet user-secrets init --project src/VocalEye.Api
 dotnet user-secrets set "Llm:Providers:gemini:ApiKey" "<key>" --project src/VocalEye.Api   # add any providers you like
-dotnet run --project src/VocalEye.Api      # GET /health, GET /api/tools (Phase 1: GET /api/models, POST /api/chat, POST /api/chat/stream)
+# Conversation history needs Postgres (docker compose above) and this in src/VocalEye.Api/appsettings.json:
+#   "Persistence": { "Provider": "Postgres" },
+#   "ConnectionStrings": { "Postgres": "Host=localhost;Port=5432;Database=vocaleye;Username=vocaleye;Password=vocaleye" }
+# No Docker? Use  "Persistence": { "Provider": "InMemory" }  (history is lost on restart).
+dotnet run --project src/VocalEye.Api      # GET /health, GET /api/tools (Phase 1: GET /api/models, POST /api/chat, POST /api/chat/stream, GET /api/conversations)
 ```
 
 ## Architecture in one picture

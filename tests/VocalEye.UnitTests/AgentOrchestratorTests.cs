@@ -231,7 +231,7 @@ public class AgentOrchestratorTests
         Mock<IChatClientFactory> factory = new Mock<IChatClientFactory>();
         factory.Setup(item => item.Create(It.IsAny<ModelSelection>())).Returns(client);
 
-        InMemoryConversationStore store = new InMemoryConversationStore();
+        ConversationStore store = new ConversationStore(new InMemoryConversationRepository());
         ToolApprovalPolicy policy = new ToolApprovalPolicy(new[] { ToolRiskLevel.Write, ToolRiskLevel.Destructive });
 
         AgentOrchestrator orchestrator = new AgentOrchestrator(
@@ -247,7 +247,7 @@ public class AgentOrchestratorTests
 
     private sealed class Rig
     {
-        public Rig(AgentOrchestrator orchestrator, Mock<IChatClientFactory> factory, InMemoryConversationStore store)
+        public Rig(AgentOrchestrator orchestrator, Mock<IChatClientFactory> factory, ConversationStore store)
         {
             Orchestrator = orchestrator;
             Factory = factory;
@@ -258,6 +258,6 @@ public class AgentOrchestratorTests
 
         public Mock<IChatClientFactory> Factory { get; }
 
-        public InMemoryConversationStore Store { get; }
+        public ConversationStore Store { get; }
     }
 }

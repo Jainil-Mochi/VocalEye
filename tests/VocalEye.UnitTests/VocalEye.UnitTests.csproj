@@ -11,5 +11,6 @@
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
   </ItemGroup>
 </Project>
