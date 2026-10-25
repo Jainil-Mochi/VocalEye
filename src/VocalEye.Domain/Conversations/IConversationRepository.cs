@@ -7,5 +7,11 @@ public interface IConversationRepository
 
     Task AddAsync(Conversation conversation, CancellationToken cancellationToken);
 
+    /// <summary>Sets the title without loading the messages. False when the conversation does not exist.</summary>
+    Task<bool> RenameAsync(Guid conversationId, string title, CancellationToken cancellationToken);
+
+    /// <summary>Deletes the conversation and all its messages. False when it does not exist.</summary>
+    Task<bool> DeleteAsync(Guid conversationId, CancellationToken cancellationToken);
+
     Task SaveChangesAsync(CancellationToken cancellationToken);
 }

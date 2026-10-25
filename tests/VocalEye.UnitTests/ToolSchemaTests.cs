@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentAssertions;
 using VocalEye.Application.Abstractions.Tools;
 using VocalEye.Tools.CodeBuilder;
+using VocalEye.Tools.Common;
 using VocalEye.Tools.DesktopCommand;
 using VocalEye.Tools.Email;
 using VocalEye.Tools.FileGeneration;
@@ -14,10 +15,10 @@ public class ToolSchemaTests
 {
     public static IEnumerable<object[]> RealTools()
     {
-        yield return new object[] { new FileGenerationTool() };
-        yield return new object[] { new SendEmailTool() };
-        yield return new object[] { new DesktopCommandTool() };
-        yield return new object[] { new CodeBuilderTool() };
+        yield return new object[] { new FileGenerationTool(new ToolOutputOptions()) };
+        yield return new object[] { new SendEmailTool(new MailKitEmailSender(new EmailOptions()), new EmailOptions()) };
+        yield return new object[] { new DesktopCommandTool(new DesktopCommandOptions(), new ProcessDesktopLauncher()) };
+        yield return new object[] { new CodeBuilderTool(new ToolOutputOptions()) };
         yield return new object[] { new GetCurrentTimeTool() };
     }
 

@@ -112,11 +112,21 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
         // A model without tool support still works; it just cannot act.
         List<AITool>? agentTools = info.SupportsTools ? AgentToolFactory.Create(_tools, _approvalPolicy) : null;
 
-        AIAgent agent = new ChatClientAgent(
-            _clients.Create(selection),
-            instructions: SystemPrompts.Assistant,
-            name: "VocalEye",
-            tools: agentTools);
+        // Approval-response binding is off on purpose (ADR-0011): the framework would only accept an approval it recorded in
+        // its own session, but we rebuild the agent every turn with no session. We enforce the same rule ourselves:
+        // ApprovalMessageBuilder answers only requests found in OUR stored history, and the client sends just an id and a yes/no.
+        ChatClientAgentOptions agentOptions = new ChatClientAgentOptions
+        {
+            Name = "VocalEye",
+            ChatOptions = new ChatOptions
+            {
+                Instructions = SystemPrompts.Assistant,
+                Tools = agentTools,
+            },
+            DisableApprovalResponseBinding = true,
+        };
+
+        AIAgent agent = new ChatClientAgent(_clients.Create(selection), agentOptions);
 
         List<ChatMessage> history = state.Messages.Concat(input).ToList();
 

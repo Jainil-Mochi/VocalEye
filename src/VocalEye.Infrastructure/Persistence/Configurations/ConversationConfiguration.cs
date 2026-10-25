@@ -13,6 +13,7 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
 
         // Ids are assigned by the domain. Without this, EF would treat a new child with a preset key as already existing.
         builder.Property(conversation => conversation.Id).ValueGeneratedNever();
+        builder.Property(conversation => conversation.Title).HasMaxLength(200);
         builder.Property(conversation => conversation.ModelProvider).HasMaxLength(100);
         builder.Property(conversation => conversation.ModelName).HasMaxLength(200);
 
