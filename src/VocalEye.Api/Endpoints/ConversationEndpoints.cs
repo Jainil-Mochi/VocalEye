@@ -18,7 +18,34 @@ public static class ConversationEndpoints
         // GET /api/conversations/{id}/messages
         app.MapGet("/api/conversations/{conversationId:guid}/messages", GetMessagesAsync);
 
+        // PATCH /api/conversations/{id}   body: { "title": "..." }
+        app.MapPatch("/api/conversations/{conversationId:guid}", RenameAsync);
+
+        // DELETE /api/conversations/{id}
+        app.MapDelete("/api/conversations/{conversationId:guid}", DeleteAsync);
+
         return app;
+    }
+
+    private static async Task<IResult> RenameAsync(
+        Guid conversationId,
+        RenameConversationDto body,
+        IConversationManager manager,
+        CancellationToken cancellationToken)
+    {
+        bool found = await manager.RenameAsync(conversationId, body.Title, cancellationToken);
+
+        return found ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static async Task<IResult> DeleteAsync(
+        Guid conversationId,
+        IConversationManager manager,
+        CancellationToken cancellationToken)
+    {
+        bool found = await manager.DeleteAsync(conversationId, cancellationToken);
+
+        return found ? Results.NoContent() : Results.NotFound();
     }
 
     private static async Task<IResult> ListAsync(

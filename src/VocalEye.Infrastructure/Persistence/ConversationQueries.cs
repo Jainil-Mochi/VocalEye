@@ -23,6 +23,7 @@ public sealed class ConversationQueries : IConversationQueries
             .Select(conversation => new ConversationSummaryDto
             {
                 Id = conversation.Id,
+                Title = conversation.Title,
                 ModelProvider = conversation.ModelProvider,
                 ModelName = conversation.ModelName,
                 UpdatedAt = conversation.UpdatedAt,

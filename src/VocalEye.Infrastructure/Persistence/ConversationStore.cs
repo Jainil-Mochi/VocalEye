@@ -53,6 +53,10 @@ public sealed class ConversationStore : IConversationStore
             conversation.AddMessage(ChatMessageMapper.ToRole(message.Role), ChatMessageMapper.ToJson(message));
         }
 
+        // Also fills the title of conversations stored before titles existed.
+        conversation.SetTitleIfMissing(state.Messages
+            .FirstOrDefault(message => message.Role == ChatRole.User && !string.IsNullOrWhiteSpace(message.Text))?.Text);
+
         if (state.Model is not null)
         {
             conversation.SetModel(state.Model.Provider, state.Model.Model);

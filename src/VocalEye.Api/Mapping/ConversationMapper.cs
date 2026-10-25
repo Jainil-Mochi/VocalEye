@@ -13,6 +13,7 @@ public static class ConversationMapper
         return new ConversationListItemDto
         {
             ConversationId = summary.Id,
+            Title = summary.Title,
             Model = hasModel
                 ? new ModelSelectionDto { Provider = summary.ModelProvider!, Model = summary.ModelName! }
                 : null,

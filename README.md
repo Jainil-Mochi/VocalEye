@@ -14,9 +14,27 @@ dotnet user-secrets set "Llm:Providers:gemini:ApiKey" "<key>" --project src/Voca
 # Conversation history needs Postgres (docker compose above) and this in src/VocalEye.Api/appsettings.json:
 #   "Persistence": { "Provider": "Postgres" },
 #   "ConnectionStrings": { "Postgres": "Host=localhost;Port=5432;Database=vocaleye;Username=vocaleye;Password=vocaleye" }
-# No Docker? Use  "Persistence": { "Provider": "InMemory" }  (history is lost on restart).
+# No Docker? Use  "Persistence": { "Provider": "Sqlite" }  (a file at %LocalAppData%\VocalEye\vocaleye.db, nothing to install;
+#   optional "ConnectionStrings": { "Sqlite": "Data Source=C:\\path\\vocaleye.db" })
+#   or "InMemory" (history is lost on restart).
 dotnet run --project src/VocalEye.Api      # GET /health, GET /api/tools (Phase 1: GET /api/models, POST /api/chat, POST /api/chat/stream, GET /api/conversations)
 ```
+
+### Tools that create files
+`file_generator` saves txt, md, pdf and docx files to `Documents\VocalEye\documents` (change with `Tools:Output:OutputDirectory` in appsettings or user-secrets). Needs NuGet packages `DocumentFormat.OpenXml` and `QuestPDF` in `src/VocalEye.Tools`. Tools that write files are approval-gated by default (`Tools:RequireApprovalFor`).
+
+### API access token (desktop and shared PCs)
+Set `Api:AccessToken` (at least 16 random characters; the desktop app generates one per launch and passes it as the environment variable `Api__AccessToken`). Every `/api/*` call must then send `Authorization: Bearer <token>`; `/health` stays open. Leave it empty for Swagger and development. Swagger's page has no Authorize button yet, so with a token set test with curl: `curl -H "Authorization: Bearer <token>" http://localhost:5000/api/models`.
+
+### Email (send_email)
+Needs the NuGet package `MailKit` in `src/VocalEye.Tools`. For Gmail turn on 2-step verification, create an **app password**, then:
+```powershell
+dotnet user-secrets set "Tools:Email:Host" "smtp.gmail.com" --project src/VocalEye.Api
+dotnet user-secrets set "Tools:Email:Username" "you@gmail.com" --project src/VocalEye.Api
+dotnet user-secrets set "Tools:Email:Password" "<app password>" --project src/VocalEye.Api
+dotnet user-secrets set "Tools:Email:FromAddress" "you@gmail.com" --project src/VocalEye.Api
+```
+Optional safety: `Tools:Email:AllowedRecipientDomains:0` = `gmail.com` limits who can be emailed.
 
 ## Architecture in one picture
 ```

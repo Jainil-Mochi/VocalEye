@@ -23,6 +23,22 @@ public sealed class InMemoryConversationRepository : IConversationRepository
         return Task.CompletedTask;
     }
 
+    public Task<bool> RenameAsync(Guid conversationId, string title, CancellationToken cancellationToken)
+    {
+        if (!_items.TryGetValue(conversationId, out Conversation? conversation))
+        {
+            return Task.FromResult(false);
+        }
+
+        conversation.Rename(title);
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> DeleteAsync(Guid conversationId, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(_items.TryRemove(conversationId, out _));
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;

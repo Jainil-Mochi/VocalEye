@@ -12,7 +12,11 @@
 - [ ] Max-step guard (cap model-to-tool round trips per turn); SignalR only if a UI needs it
 - [x] **Slice 4:** conversation history in Postgres (`Persistence:Provider` Postgres|InMemory), `GET /api/conversations`, `GET /api/conversations/{id}/messages`, model switchable between turns (see ADR-0009). Not yet: model recorded per message, EF migrations
 - [ ] Text endpoint accepts `InputMode` text|voice (identical handling); optional `POST /api/transcribe`
-- [ ] Port tools: file generation (txt/pdf/docx/pptx), email (MailKit), desktop command (allow-listed, structured), code builder (sandboxed output dir)
+- [ ] Port tools, one per patch (ADR-0010: the agent writes the content, tools only validate and save):
+  - [x] **5a** `file_generator`: txt, md, pdf, docx (pptx later)
+  - [x] **5b** `code_builder` (saves a model-written project under `Documents\VocalEye\projects`; nothing is executed)
+  - [x] **5d** `send_email` (MailKit SMTP, one recipient, approval required, password in user-secrets)
+  - [x] **5c** `desktop_command` (open_url http/https + open_app from an allow-list; no shell)
 - [ ] `POST /api/chat`, SignalR streaming, health checks
 - [ ] Unit tests for each tool; integration test for chat endpoint with a fake `IChatClient`
 
@@ -39,3 +43,12 @@
 - [ ] Desktop client (ADR-0004), voice (STT/TTS)
 - [ ] Web client
 - [ ] Aspire AppHost or Kubernetes; horizontal scaling; extract Worker/Rag if needed
+
+## Desktop enablement (backend slices for the desktop app)
+- [x] **B1** SQLite persistence (`Persistence:Provider = Sqlite`, file in `%LocalAppData%\VocalEye`, created on start)
+- [x] **B2** local access token (`Api:AccessToken`, bearer on `/api/*`; `/health` stays open)
+- [x] **B3** `GET /api/info` (version, OS, persistence, token required, output folder, email/desktop flags, providers, tools needing approval)
+- [x] **B4** `PATCH`/`DELETE /api/conversations/{id}`, `title` in the list (auto from the first message)
+- [ ] **B5** voice endpoints
+- [ ] **B6** structured tool results, pending approvals in history
+- [ ] **B7** max tool rounds, retry for 503/429

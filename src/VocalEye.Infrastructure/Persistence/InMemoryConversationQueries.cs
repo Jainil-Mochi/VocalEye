@@ -21,6 +21,7 @@ public sealed class InMemoryConversationQueries : IConversationQueries
             .Select(conversation => new ConversationSummaryDto
             {
                 Id = conversation.Id,
+                Title = conversation.Title,
                 ModelProvider = conversation.ModelProvider,
                 ModelName = conversation.ModelName,
                 UpdatedAt = conversation.UpdatedAt,

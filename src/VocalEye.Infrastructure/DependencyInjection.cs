@@ -28,24 +28,36 @@ public static class DependencyInjection
         return services;
     }
 
-    /// <summary>Registers conversation storage: Postgres (default) or InMemory, chosen by Persistence:Provider.</summary>
+    /// <summary>Registers conversation storage: Postgres (default), Sqlite or InMemory, chosen by Persistence:Provider.</summary>
     /// <exception cref="InvalidOperationException">Unknown provider, or Postgres selected without a connection string.</exception>
     public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
-        string provider = configuration["Persistence:Provider"] ?? "Postgres";
+        string provider = PersistenceProviders.Resolve(configuration);
 
-        if (string.Equals(provider, "InMemory", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(provider, PersistenceProviders.InMemory, StringComparison.OrdinalIgnoreCase))
         {
             services.AddSingleton<InMemoryConversationRepository>();
             services.AddSingleton<IConversationRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryConversationRepository>());
             services.AddSingleton<IConversationQueries, InMemoryConversationQueries>();
             services.AddScoped<IConversationStore, ConversationStore>();
+            services.AddScoped<IConversationManager, ConversationManager>();
             return services;
         }
 
-        if (!string.Equals(provider, "Postgres", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(provider, PersistenceProviders.Sqlite, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"Persistence:Provider '{provider}' is not supported. Use 'Postgres' or 'InMemory'.");
+            // No setup needed for a desktop user: without a connection string the file goes to %LocalAppData%\VocalEye.
+            string sqliteConnection = configuration.GetConnectionString("Sqlite") ?? SqliteConnectionStrings.CreateDefault();
+            SqliteConnectionStrings.EnsureDirectoryExists(sqliteConnection);
+
+            services.AddDbContext<VocalEyeDbContext>(options => options.UseSqlite(sqliteConnection));
+            AddDatabaseServices(services);
+            return services;
+        }
+
+        if (!string.Equals(provider, PersistenceProviders.Postgres, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Persistence:Provider '{provider}' is not supported. Use 'Postgres', 'Sqlite' or 'InMemory'.");
         }
 
         string? connectionString = configuration.GetConnectionString("Postgres");
@@ -55,13 +67,19 @@ public static class DependencyInjection
                 "ConnectionStrings:Postgres is not configured. Add to appsettings.json: " +
                 "\"Persistence\": { \"Provider\": \"Postgres\" }, " +
                 "\"ConnectionStrings\": { \"Postgres\": \"Host=localhost;Port=5432;Database=vocaleye;Username=vocaleye;Password=vocaleye\" } " +
-                "(matches docker-compose.yml), or set Persistence:Provider to InMemory.");
+                "(matches docker-compose.yml), or set Persistence:Provider to Sqlite or InMemory.");
         }
 
         services.AddDbContext<VocalEyeDbContext>(options => options.UseNpgsql(connectionString));
+        AddDatabaseServices(services);
+        return services;
+    }
+
+    private static void AddDatabaseServices(IServiceCollection services)
+    {
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IConversationQueries, ConversationQueries>();
         services.AddScoped<IConversationStore, ConversationStore>();
-        return services;
+        services.AddScoped<IConversationManager, ConversationManager>();
     }
 }

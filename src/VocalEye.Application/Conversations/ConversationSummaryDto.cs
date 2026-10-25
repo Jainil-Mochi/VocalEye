@@ -5,6 +5,8 @@ public class ConversationSummaryDto
 {
     public Guid Id { get; set; }
 
+    public string? Title { get; set; }
+
     public string? ModelProvider { get; set; }
 
     public string? ModelName { get; set; }
