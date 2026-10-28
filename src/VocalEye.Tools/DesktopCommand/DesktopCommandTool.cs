@@ -80,7 +80,9 @@ public sealed class DesktopCommandTool : IAgentTool
         }
 
         _launcher.OpenUrl(url);
-        return ToolResult.Ok($"Opened {url.AbsoluteUri} in the default browser.");
+        return ToolResult.Ok(
+            $"Opened {url.AbsoluteUri} in the default browser.",
+            new[] { new ToolArtifact(ToolArtifactKinds.Url, url.AbsoluteUri) });
     }
 
     private ToolResult OpenApp(string target)

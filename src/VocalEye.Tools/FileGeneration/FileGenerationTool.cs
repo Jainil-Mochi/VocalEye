@@ -75,7 +75,9 @@ public sealed class FileGenerationTool : IAgentTool
             await Task.Run(() => writer.Write(blocks, path), cancellationToken);
         }
 
-        return ToolResult.Ok($"Saved the {fileType.ToUpperInvariant()} file: {path}");
+        return ToolResult.Ok(
+            $"Saved the {fileType.ToUpperInvariant()} file: {path}",
+            new[] { new ToolArtifact(ToolArtifactKinds.File, path) });
     }
 
     private static string BuildFileName(string requestedName, string fileType)

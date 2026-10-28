@@ -1,9 +1,9 @@
-using System.Text.Json;
 using Microsoft.Extensions.AI;
 using VocalEye.Agents.Tooling;
 using VocalEye.Application.Abstractions.Agents;
 using VocalEye.Application.Abstractions.Llm;
 using VocalEye.Application.Abstractions.Tools;
+using VocalEye.Application.Conversations;
 
 namespace VocalEye.Agents.Orchestration;
 
@@ -44,9 +44,16 @@ public static class AgentReplyBuilder
         string output = result.Result?.ToString() ?? string.Empty;
         bool failed = output.StartsWith(AgentToolAdapter.ErrorPrefix, StringComparison.Ordinal);
 
-        ToolResult toolResult = failed
-            ? ToolResult.Fail(output[AgentToolAdapter.ErrorPrefix.Length..])
-            : ToolResult.Ok(output);
+        ToolResult toolResult;
+        if (failed)
+        {
+            toolResult = ToolResult.Fail(output[AgentToolAdapter.ErrorPrefix.Length..]);
+        }
+        else
+        {
+            (string text, IReadOnlyList<ToolArtifact> artifacts) = ToolResultText.Split(output);
+            toolResult = ToolResult.Ok(text, artifacts);
+        }
 
         return new ToolInvocation(call?.Name ?? "unknown", ArgumentsJson(call), toolResult);
     }
@@ -58,6 +65,6 @@ public static class AgentReplyBuilder
 
     private static string ArgumentsJson(FunctionCallContent? call)
     {
-        return JsonSerializer.Serialize(call?.Arguments ?? new Dictionary<string, object?>());
+        return ToolCallArguments.ToJson(call);
     }
 }

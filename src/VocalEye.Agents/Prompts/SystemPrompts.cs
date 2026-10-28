@@ -23,6 +23,7 @@ public static class SystemPrompts
         never invent an address; ask the user if you are missing it.
         desktop_command opens a web link (a full https URL; for searches build a search URL) or one of the allowed
         apps on the user's computer. If the user asks for something it cannot do, say so instead of guessing.
+        A tool result can end with a line that starts with [artifacts]; it is for the app. Never repeat or quote it.
         Keep answers concise.
         """;
 }

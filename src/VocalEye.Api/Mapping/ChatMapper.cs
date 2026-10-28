@@ -1,5 +1,6 @@
 using VocalEye.Application.Abstractions.Agents;
 using VocalEye.Application.Abstractions.Llm;
+using VocalEye.Application.Abstractions.Tools;
 using VocalEye.Contracts.Chat;
 
 namespace VocalEye.Api.Mapping;
@@ -48,10 +49,13 @@ public static class ChatMapper
             ArgumentsJson = invocation.ArgumentsJson,
             Success = invocation.Result.Success,
             Output = invocation.Result.Success ? invocation.Result.Output : invocation.Result.Error ?? string.Empty,
+            Artifacts = (invocation.Result.Artifacts ?? Array.Empty<ToolArtifact>())
+                .Select(artifact => new ToolArtifactDto { Kind = artifact.Kind, Value = artifact.Value })
+                .ToList(),
         };
     }
 
-    private static PendingApprovalDto ToPendingApproval(PendingApproval approval)
+    public static PendingApprovalDto ToPendingApproval(PendingApproval approval)
     {
         return new PendingApprovalDto
         {

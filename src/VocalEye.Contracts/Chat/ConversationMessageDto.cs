@@ -11,4 +11,7 @@ public class ConversationMessageDto
 
     /// <summary>Names of the tools the assistant called in this message, if any.</summary>
     public List<string> ToolNames { get; set; } = new List<string>();
+
+    /// <summary>For a tool message: what each tool call returned, with its name, arguments and any files it made.</summary>
+    public List<ToolCallDto> ToolResults { get; set; } = new List<ToolCallDto>();
 }

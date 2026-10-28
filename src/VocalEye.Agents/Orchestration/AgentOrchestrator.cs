@@ -23,6 +23,7 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
     private readonly IToolRegistry _tools;
     private readonly IToolApprovalPolicy _approvalPolicy;
     private readonly IConversationStore _store;
+    private readonly AgentOptions _options;
     private readonly ILogger<AgentOrchestrator> _logger;
 
     public AgentOrchestrator(
@@ -31,6 +32,7 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
         IToolRegistry tools,
         IToolApprovalPolicy approvalPolicy,
         IConversationStore store,
+        AgentOptions options,
         ILogger<AgentOrchestrator> logger)
     {
         _clients = clients;
@@ -38,6 +40,7 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
         _tools = tools;
         _approvalPolicy = approvalPolicy;
         _store = store;
+        _options = options;
         _logger = logger;
     }
 
@@ -126,7 +129,8 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
             DisableApprovalResponseBinding = true,
         };
 
-        AIAgent agent = new ChatClientAgent(_clients.Create(selection), agentOptions);
+        IChatClient limitedClient = new ToolRoundLimitChatClient(_clients.Create(selection), _options.MaxToolRounds, _logger);
+        AIAgent agent = new ChatClientAgent(limitedClient, agentOptions);
 
         List<ChatMessage> history = state.Messages.Concat(input).ToList();
 
