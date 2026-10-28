@@ -11,7 +11,7 @@ namespace VocalEye.Agents.Tooling;
 /// </summary>
 public sealed class AgentToolAdapter : AIFunction
 {
-    public const string ErrorPrefix = "Error: ";
+    public const string ErrorPrefix = ToolResultText.ErrorPrefix;
 
     private readonly IAgentTool _tool;
     private readonly JsonElement _schema;
@@ -38,7 +38,7 @@ public sealed class AgentToolAdapter : AIFunction
             JsonElement argumentsJson = JsonSerializer.SerializeToElement(values);
             ToolResult result = await _tool.ExecuteAsync(argumentsJson, cancellationToken);
 
-            return result.Success ? result.Output : ErrorPrefix + result.Error;
+            return result.Success ? ToolResultText.Append(result.Output, result.Artifacts) : ErrorPrefix + result.Error;
         }
         catch (OperationCanceledException)
         {

@@ -31,7 +31,9 @@ builder.Services.AddTools(toolOutput, toolDesktop, toolEmail);
 // Which tool risk levels pause for user approval (config: Tools:RequireApprovalFor).
 IReadOnlyList<ToolRiskLevel> approvalRisks = ToolRiskParser.Parse(
     builder.Configuration.GetSection("Tools:RequireApprovalFor").Get<string[]>());
-builder.Services.AddAgents(approvalRisks);
+AgentOptions agentOptions = builder.Configuration.GetSection("Agents").Get<AgentOptions>() ?? new AgentOptions();
+agentOptions.Validate();
+builder.Services.AddAgents(approvalRisks, agentOptions);
 
 WebApplication app = builder.Build();
 

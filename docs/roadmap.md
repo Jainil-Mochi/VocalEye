@@ -50,5 +50,5 @@
 - [x] **B3** `GET /api/info` (version, OS, persistence, token required, output folder, email/desktop flags, providers, tools needing approval)
 - [x] **B4** `PATCH`/`DELETE /api/conversations/{id}`, `title` in the list (auto from the first message)
 - [ ] **B5** voice endpoints
-- [ ] **B6** structured tool results, pending approvals in history
-- [ ] **B7** max tool rounds, retry for 503/429
+- [x] **B6** `toolCalls[].artifacts` (file, folder, url), tool results in history (`toolResults`), `GET /api/conversations/{id}/pending-approvals`
+- [x] **B7** `Agents:MaxToolRounds` (default 8): after that the model must answer without tools. Retry for 503/429 already exists as `Llm:Providers:<name>:MaxRetries` (SDK back-off)

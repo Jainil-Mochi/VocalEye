@@ -113,7 +113,9 @@ public sealed class CodeBuilderTool : IAgentTool
             await File.WriteAllTextAsync(file.FullPath, file.Content, new UTF8Encoding(false), cancellationToken);
         }
 
-        return ToolResult.Ok(BuildSummary(projectDirectory, files));
+        return ToolResult.Ok(
+            BuildSummary(projectDirectory, files),
+            new[] { new ToolArtifact(ToolArtifactKinds.Folder, projectDirectory) });
     }
 
     /// <summary>Finds duplicate paths and a path used as both a file and a folder ("a" and "a/b").</summary>

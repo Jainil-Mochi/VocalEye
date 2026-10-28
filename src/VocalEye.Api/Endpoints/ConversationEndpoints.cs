@@ -18,6 +18,9 @@ public static class ConversationEndpoints
         // GET /api/conversations/{id}/messages
         app.MapGet("/api/conversations/{conversationId:guid}/messages", GetMessagesAsync);
 
+        // GET /api/conversations/{id}/pending-approvals: tool calls still waiting for the user (to resume after a restart)
+        app.MapGet("/api/conversations/{conversationId:guid}/pending-approvals", GetPendingApprovalsAsync);
+
         // PATCH /api/conversations/{id}   body: { "title": "..." }
         app.MapPatch("/api/conversations/{conversationId:guid}", RenameAsync);
 
@@ -71,6 +74,20 @@ public static class ConversationEndpoints
             return Results.NotFound();
         }
 
-        return Results.Ok(messages.Select(ConversationMapper.ToMessage).ToList());
+        return Results.Ok(ConversationMapper.ToMessages(messages));
+    }
+
+    private static async Task<IResult> GetPendingApprovalsAsync(
+        Guid conversationId,
+        IConversationQueries queries,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<StoredMessageDto>? messages = await queries.GetMessagesAsync(conversationId, cancellationToken);
+        if (messages is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(PendingApprovalFinder.Find(messages).Select(ChatMapper.ToPendingApproval).ToList());
     }
 }

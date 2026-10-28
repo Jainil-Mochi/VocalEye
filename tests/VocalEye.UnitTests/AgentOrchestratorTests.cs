@@ -3,6 +3,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using VocalEye.Agents;
 using VocalEye.Agents.Guardrails;
 using VocalEye.Agents.Orchestration;
 using VocalEye.Application.Abstractions.Agents;
@@ -86,6 +87,23 @@ public class AgentOrchestratorTests
         invocation.Name.Should().Be("get_time");
         invocation.Result.Success.Should().BeTrue();
         invocation.Result.Output.Should().Be("12:00");
+    }
+
+    [Fact]
+    public async Task RunAsync_ModelKeepsCallingTools_IsStoppedAtTheLimitAndStillAnswers()
+    {
+        Mock<IAgentTool> tool = ToolMockFactory.Create("get_time", ToolRiskLevel.ReadOnly, "12:00");
+        Rig rig = CreateRig(
+            (call, messages) => messages.Any(message => message.Text.Contains("tool limit"))
+                ? ScriptedChatClient.Text("I could not finish; here is what I have.")
+                : ScriptedChatClient.CallTool($"c{call}", "get_time"),
+            new AgentOptions { MaxToolRounds = 2 },
+            tool.Object);
+
+        AgentReply reply = await rig.Orchestrator.RunAsync(new AgentRequest(Guid.NewGuid(), "keep checking"), CancellationToken.None);
+
+        reply.Text.Should().Be("I could not finish; here is what I have.");
+        ToolMockFactory.VerifyExecuted(tool, Times.Exactly(2));
     }
 
     [Fact]
@@ -213,6 +231,14 @@ public class AgentOrchestratorTests
         Func<int, IReadOnlyList<ChatMessage>, ChatResponse> script,
         params IAgentTool[] tools)
     {
+        return CreateRig(script, new AgentOptions(), tools);
+    }
+
+    private static Rig CreateRig(
+        Func<int, IReadOnlyList<ChatMessage>, ChatResponse> script,
+        AgentOptions agentOptions,
+        params IAgentTool[] tools)
+    {
         ModelCatalog catalog = new ModelCatalog(Options.Create(new LlmOptions
         {
             Default = new DefaultModelOptions { Provider = "fake", Model = "m1" },
@@ -240,6 +266,7 @@ public class AgentOrchestratorTests
             new ToolRegistry(tools),
             policy,
             store,
+            agentOptions,
             NullLogger<AgentOrchestrator>.Instance);
 
         return new Rig(orchestrator, factory, store);
