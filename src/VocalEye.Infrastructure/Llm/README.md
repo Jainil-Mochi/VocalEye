@@ -11,3 +11,10 @@ Implements `IModelCatalog` and `IChatClientFactory` (Application/Abstractions/Ll
   - Anthropic: currently via its OpenAI-compatible endpoint (`Type: OpenAICompatible`, `https://api.anthropic.com/v1/`). Swap to a native `IChatClient` adapter later if needed (some Claude-specific features are not available through the compat layer)
   - `Ollama`: OllamaSharp (implements `IChatClient`)
 Adding a provider = add one builder + one config block. No other code changes.
+
+## Gemini 3 and tool calls
+Gemini 3 returns a "thought signature" with each function call and rejects the next request if it is missing
+(`400 Function call is missing a thought_signature`). The OpenAI client drops that field, so
+`Providers/GeminiThoughtSignatureHandler` adds Google's placeholder (`skip_thought_signature_validator`) to the first tool
+call of each assistant message that has no signature. It applies only to `generativelanguage.googleapis.com`.
+Config (optional): `Llm:Providers:gemini:ThoughtSignatureFallback` - another placeholder value, or `""` to switch it off.

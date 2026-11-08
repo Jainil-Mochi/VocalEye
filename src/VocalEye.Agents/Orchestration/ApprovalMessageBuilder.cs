@@ -29,4 +29,43 @@ public static class ApprovalMessageBuilder
 
         return new ChatMessage(ChatRole.User, contents);
     }
+
+    /// <summary>
+    /// Builds the approval answers for a turn. Every request still waiting must be answered for the framework to continue, so a
+    /// request the client did not answer (for example the user typed a new message instead) is denied.
+    /// Returns null when nothing is waiting and no decisions were sent.
+    /// </summary>
+    /// <exception cref="ArgumentException">A decision does not match a request that is waiting for an answer.</exception>
+    public static ChatMessage? BuildComplete(IReadOnlyList<ChatMessage> stored, IReadOnlyList<ApprovalDecision>? decisions)
+    {
+        IReadOnlyList<ToolApprovalRequestContent> live = ApprovalHistory.FindLiveRequests(stored);
+        List<ApprovalDecision> answers = decisions?.ToList() ?? new List<ApprovalDecision>();
+
+        HashSet<string> liveIds = live
+            .Where(request => request.ToolCall is FunctionCallContent)
+            .Select(request => ((FunctionCallContent)request.ToolCall).CallId)
+            .ToHashSet();
+
+        foreach (ApprovalDecision decision in answers)
+        {
+            if (!liveIds.Contains(decision.ApprovalId))
+            {
+                throw new ArgumentException($"No pending approval with id '{decision.ApprovalId}'.");
+            }
+        }
+
+        if (liveIds.Count == 0)
+        {
+            return null;
+        }
+
+        HashSet<string> answeredIds = answers.Select(decision => decision.ApprovalId).ToHashSet();
+        foreach (string unansweredId in liveIds.Where(id => !answeredIds.Contains(id)))
+        {
+            answers.Add(new ApprovalDecision(unansweredId, false));
+        }
+
+        return Build(stored, answers);
+    }
+
 }

@@ -102,9 +102,20 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
             ?? throw new ArgumentException($"Model '{selection.Provider}/{selection.Model}' is not available.", nameof(request));
 
         List<ChatMessage> input = new List<ChatMessage>();
-        if (hasApprovals)
+
+        // Requests left unanswered (e.g. the user typed a new message instead of approving) are denied, because the
+        // framework refuses a history that holds an approval request without a matching response.
+        ChatMessage? approvalMessage = ApprovalMessageBuilder.BuildComplete(state.Messages, request.Approvals);
+        if (approvalMessage is not null)
         {
-            input.Add(ApprovalMessageBuilder.Build(state.Messages, request.Approvals!));
+            input.Add(approvalMessage);
+        }
+
+        if (!hasApprovals && approvalMessage is not null)
+        {
+            _logger.LogWarning(
+                "Conversation {ConversationId}: a new message arrived while approvals were pending; they were denied.",
+                request.ConversationId);
         }
 
         if (hasText)
@@ -132,7 +143,7 @@ public sealed class AgentOrchestrator : IAgentOrchestrator
         IChatClient limitedClient = new ToolRoundLimitChatClient(_clients.Create(selection), _options.MaxToolRounds, _logger);
         AIAgent agent = new ChatClientAgent(limitedClient, agentOptions);
 
-        List<ChatMessage> history = state.Messages.Concat(input).ToList();
+        List<ChatMessage> history = ApprovalHistory.RemoveResolved(state.Messages).Concat(input).ToList();
 
         _logger.LogInformation(
             "Agent turn {ConversationId} model={Provider}/{Model} mode={Mode} tools={ToolCount} historyMessages={History}",
